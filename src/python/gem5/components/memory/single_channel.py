@@ -26,6 +26,8 @@
 
 from typing import Optional
 
+from m5.objects import AddrRange
+
 from .abstract_memory_system import AbstractMemorySystem
 from .dram_interfaces.ddr3 import (
     DDR3_1600_8x8,
@@ -108,3 +110,19 @@ def DIMM_DDR5_8400(
     A single DIMM of DDR5 has two channels.
     """
     return ChanneledMemory(DDR5_8400_4x8, 2, 64, size=size)
+
+
+def DIMM_DDR5_4400_x86_Holes(
+    size: Optional[str] = None,
+) -> AbstractMemorySystem:
+    """
+    A single DIMM of DDR5 has two channels.
+    """
+    return ChanneledMemory(
+        DDR5_4400_4x8,
+        2,
+        64,
+        size=size,
+        holes=[AddrRange(start="3GiB", end=0xFFFF0000)],
+        modulo=True,
+    )

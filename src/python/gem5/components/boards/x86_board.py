@@ -143,7 +143,9 @@ class X86Board(AbstractSystemBoard, KernelDiskWorkload, SEBinaryWorkload):
             APIC_range_size = 1 << 12
 
             self.bridge.ranges = [
-                AddrRange(0xC0000000, 0xFFFF0000),
+                AddrRange(
+                    0xC0000000, 0xFFFF0000
+                ),  # does this need to be the size of queue?
                 AddrRange(
                     IO_address_space_base, interrupts_address_space_base - 1
                 ),
@@ -277,14 +279,39 @@ class X86Board(AbstractSystemBoard, KernelDiskWorkload, SEBinaryWorkload):
             X86E820Entry(addr=0, size="639KiB", range_type=1),
             X86E820Entry(addr=0x9FC00, size="385KiB", range_type=2),
             # Mark the rest of physical memory as available
-            X86E820Entry(
-                addr=0x100000,
-                size=f"{self.mem_ranges[0].size() - 0x100000:d}B",
-                range_type=1,
-            ),
+            # is the below entry messing us up?
+            # X86E820Entry(
+            #     addr=0x100000,
+            #     size=f"{self.mem_ranges[0].size() - 0x100000:d}B",
+            #     range_type=1,
+            # ),
         ]
 
-        # Reserve the last 16KiB of the 32-bit address space for m5ops
+        if self.get_memory().get_size() > toMemorySize("3GiB"):
+            entries.append(
+                X86E820Entry(
+                    addr=0x100000,
+                    size=f"{toMemorySize("3GiB") - 0x100000:d}B",
+                    range_type=1,
+                )
+            )
+
+            entries.append(
+                X86E820Entry(
+                    addr=0x100000000,
+                    size=f"{self.mem_ranges[0].size() - toMemorySize('4GiB'):d}B",
+                    range_type=1,
+                )
+            )
+        else:
+            entries.append(
+                X86E820Entry(
+                    addr=0x100000,
+                    size=f"{self.mem_ranges[0].size() - 0x100000:d}B",
+                    range_type=1,
+                )
+            )
+        # Reserve the last 16kB of the 32-bit address space for m5ops
         entries.append(
             X86E820Entry(addr=0xFFFF0000, size="64KiB", range_type=2)
         )
@@ -338,12 +365,21 @@ class X86Board(AbstractSystemBoard, KernelDiskWorkload, SEBinaryWorkload):
     def _setup_memory_ranges(self):
         memory = self.get_memory()
 
-        if memory.get_size() > toMemorySize("3GiB"):
-            raise Exception(
-                "X86Board currently only supports memory sizes up "
-                "to 3GiB because of the I/O hole."
-            )
-        data_range = AddrRange(memory.get_size())
+        # if memory.get_size() > toMemorySize("3GB"):
+        #     raise Exception(
+        #         "X86Board currently only supports memory sizes up "
+        #         "to 3GB because of the I/O hole."
+        #     )
+        data_range = AddrRange(
+            start=0,
+            end=memory.get_size(),
+            modulo_by=1,
+            lowest_modulo_bit=7,
+            intlvMatch=0,
+            holes=[AddrRange(start="3GiB", end="4GiB")],
+        )
+        # '0xFFFF0000'
+        # data_range = AddrRange(memory.get_size())
         memory.set_memory_range([data_range])
 
         # Add the address range for the IO

@@ -30,7 +30,9 @@ from ...components.boards.x86_board import X86Board
 from ...components.cachehierarchies.classic.private_l1_shared_l2_cache_hierarchy import (
     PrivateL1SharedL2CacheHierarchy,
 )
-from ...components.memory.multi_channel import DualChannelDDR4_2400
+from ...components.memory.single_channel import SingleChannelDDR3_1600
+
+# from ...components.memory.single_channel import DIMM_DDR5_4400_x86_Holes
 from ...components.processors.cpu_types import CPUTypes
 from ...components.processors.simple_processor import SimpleProcessor
 from ...isas import ISA
@@ -74,9 +76,8 @@ class X86DemoBoard(X86Board):
             "real-world system. Use with caution."
         )
 
-        # The other demo boards have 4 GiB of memory, but X86Board can only
-        # support up to 3 GiB.
-        memory = DualChannelDDR4_2400(size="3GiB")
+        memory = SingleChannelDDR3_1600(size="3GB")
+        # memory = DIMM_DDR5_4400_x86_Holes(size="9GB")
         processor = SimpleProcessor(
             cpu_type=CPUTypes.TIMING, isa=ISA.X86, num_cores=2
         )

@@ -78,6 +78,9 @@ class ChanneledMemory(AbstractMemorySystem):
         interleaving_size: Union[int, str],
         size: Optional[str] = None,
         addr_mapping: Optional[str] = None,
+        holes: Optional[List[AddrRange]] = None,
+        # holes be inserted here, or in the set_memory_range method?
+        modulo: Optional[bool] = False,
     ) -> None:
         """
         :param dram_interface_class: The DRAM interface type to create with
@@ -121,6 +124,9 @@ class ChanneledMemory(AbstractMemorySystem):
         else:
             self._size = self._get_dram_size(num_channels, self._dram_class)
 
+        self._holes = holes
+        self._modulo = modulo
+
         self._create_mem_interfaces_controller()
 
     def _create_mem_interfaces_controller(self):
@@ -141,30 +147,42 @@ class ChanneledMemory(AbstractMemorySystem):
         )
 
     def _interleave_addresses(self):
-        if self._addr_mapping == "RoRaBaChCo":
-            rowbuffer_size = (
-                self._dram_class.device_rowbuffer_size.value
-                * self._dram_class.devices_per_rank.value
-            )
-            intlv_low_bit = log(rowbuffer_size, 2)
-        elif self._addr_mapping in ["RoRaBaCoCh", "RoCoRaBaCh"]:
-            intlv_low_bit = log(self._intlv_size, 2)
+        if self._modulo:
+            print("Using modulo interleaving")
+            for i, ctrl in enumerate(self.mem_ctrl):
+                ctrl.dram.range = AddrRange(
+                    start=self._mem_range.start,
+                    end=self._mem_range.end,
+                    modulo_by=self._num_channels,
+                    lowest_modulo_bit=log(self._intlv_size, 2),
+                    intlvMatch=i,
+                    holes=self._holes,
+                )
         else:
-            raise ValueError(
-                "Only these address mappings are supported: "
-                "RoRaBaChCo, RoRaBaCoCh, RoCoRaBaCh"
-            )
+            if self._addr_mapping == "RoRaBaChCo":
+                rowbuffer_size = (
+                    self._dram_class.device_rowbuffer_size.value
+                    * self._dram_class.devices_per_rank.value
+                )
+                intlv_low_bit = log(rowbuffer_size, 2)
+            elif self._addr_mapping in ["RoRaBaCoCh", "RoCoRaBaCh"]:
+                intlv_low_bit = log(self._intlv_size, 2)
+            else:
+                raise ValueError(
+                    "Only these address mappings are supported: "
+                    "RoRaBaChCo, RoRaBaCoCh, RoCoRaBaCh"
+                )
 
-        intlv_bits = log(self._num_channels, 2)
-        for i, ctrl in enumerate(self.mem_ctrl):
-            ctrl.dram.range = AddrRange(
-                start=self._mem_range.start,
-                size=self._mem_range.size(),
-                intlvHighBit=intlv_low_bit + intlv_bits - 1,
-                xorHighBit=0,
-                intlvBits=intlv_bits,
-                intlvMatch=i,
-            )
+            intlv_bits = log(self._num_channels, 2)
+            for i, ctrl in enumerate(self.mem_ctrl):
+                ctrl.dram.range = AddrRange(
+                    start=self._mem_range.start,
+                    size=self._mem_range.size(),
+                    intlvHighBit=intlv_low_bit + intlv_bits - 1,
+                    xorHighBit=0,
+                    intlvBits=intlv_bits,
+                    intlvMatch=i,
+                )
 
     @overrides(AbstractMemorySystem)
     def incorporate_memory(self, board: AbstractBoard) -> None:
@@ -210,3 +228,6 @@ class ChanneledMemory(AbstractMemorySystem):
     @overrides(AbstractMemorySystem)
     def get_uninterleaved_range(self) -> List[AddrRange]:
         return [self._mem_range]
+
+    # def get_holes(self) -> List[AddrRange]:
+    #     return self._holes

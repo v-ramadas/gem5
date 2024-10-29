@@ -43,7 +43,9 @@ from gem5.components.boards.x86_board import X86Board
 from gem5.components.cachehierarchies.ruby.mesi_two_level_cache_hierarchy import (
     MESITwoLevelCacheHierarchy,
 )
-from gem5.components.memory.single_channel import SingleChannelDDR4_2400
+
+# from gem5.components.memory.single_channel import SingleChannelDDR4_2400
+from gem5.components.memory.single_channel import DIMM_DDR5_4400_x86_Holes
 from gem5.components.processors.cpu_types import CPUTypes
 from gem5.components.processors.simple_switchable_processor import (
     SimpleSwitchableProcessor,
@@ -77,7 +79,8 @@ cache_hierarchy = MESITwoLevelCacheHierarchy(
 )
 
 # Main memory
-memory = SingleChannelDDR4_2400(size="3GiB")
+memory = DIMM_DDR5_4400_x86_Holes(size="9GiB")
+# SingleChannelDDR4_2400(size="3GiB")
 
 # This is a switchable CPU. We first boot Ubuntu using KVM, then the guest
 # will exit the simulation by calling "m5 exit" (see the `command` variable
@@ -104,7 +107,26 @@ board = X86Board(
     cache_hierarchy=cache_hierarchy,
 )
 
-workload = obtain_resource("x86-ubuntu-24.04-boot-with-systemd")
+# Here we set the Full System workload.
+# The `set_kernel_disk_workload` function for the X86Board takes a kernel, a
+# disk image, and, optionally, a command to run.
+
+# This is the command to run after the system has booted. The first `m5 exit`
+# will stop the simulation so we can switch the CPU cores from KVM to timing
+# and continue the simulation to run the echo command, sleep for a second,
+# then, again, call `m5 exit` to terminate the simulation. After simulation
+# has ended you may inspect `m5out/system.pc.com_1.device` to see the echo
+# output.
+command = (
+    "m5 exit;"
+    + "cat /proc/meminfo;"
+    + "echo 'This is running on Timing CPU cores.';"
+    + "sleep 1;"
+    + "m5 exit;"
+)
+
+workload = obtain_resource("x86-ubuntu-18.04-boot", resource_version="2.0.0")
+workload.set_parameter("readfile_contents", command)
 board.set_workload(workload)
 
 

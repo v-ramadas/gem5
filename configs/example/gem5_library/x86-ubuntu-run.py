@@ -53,8 +53,17 @@ from gem5.simulate.simulator import Simulator
 # simulation.
 board = X86DemoBoard()
 
-workload = obtain_resource("x86-ubuntu-24.04-boot-with-systemd")
-board.set_workload(workload)
+# We then set the workload. Here we use the "x86-ubuntu-18.04-boot" workload.
+# This boots Ubuntu 18.04 with Linux 5.4.49. If the required resources are not
+# found locally, they will be downloaded.
+command = "cat /proc/meminfo;"
+workload = obtain_resource("x86-ubuntu-18.04-boot", resource_version="2.0.0")
+workload.set_parameter("readfile_contents", command)
+
+board.set_workload(
+    # obtain_resource("x86-ubuntu-18.04-boot", resource_version="2.0.0")
+    workload
+)
 
 
 def exit_event_handler():
