@@ -389,8 +389,31 @@ KvmVM::delayedStartup()
                       "a KVM VM.\n");
             }
 
-            const MemSlot slot = allocMemSlot(range.size());
-            setupMemSlot(slot, pmem, range.start(), 0/* flags */);
+            if (range.addrholes().size() == 0) {
+                const MemSlot slot = allocMemSlot(range.size());
+                setupMemSlot(slot, pmem, range.start(), 0/* flags */);
+            } else if (range.addrholes().size() == 1){
+                // find all contiguous ranges between range.start()
+                // and (range.start() + range.size) that are not in holes
+                std::vector<AddrRange> ranges;
+                ranges.emplace_back(AddrRange(range.start(),
+                                    range.addrholes().front().start()));
+                ranges.emplace_back(AddrRange(range.addrholes().back().end(),
+                                    range.end()));
+                for (const auto &r : ranges) {
+                    const MemSlot slot = allocMemSlot(r.size());
+                    setupMemSlot(slot, static_cast<void*>(
+                                 static_cast<char*>(pmem) +
+                                 (r.start()-range.start())
+                                 ), r.start(), 0/* flags */);
+                }
+
+            } else{
+                panic("Multiple holes in memory ranges are not supported by
+                       KVM.\n");
+                // To support this need to have a sorted list of address holes
+                // then follow the process above
+            }
         } else {
             DPRINTF(Kvm, "Zero-region not mapped: [0x%llx]\n", range.start());
             hack("KVM: Zero memory handled as IO\n");

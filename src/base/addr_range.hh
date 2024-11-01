@@ -42,14 +42,19 @@
 #define __BASE_ADDR_RANGE_HH__
 
 #include <algorithm>
+#include <cstdio>
+#include <iostream>
 #include <iterator>
 #include <list>
+#include <string>
 #include <vector>
 
 #include "base/bitfield.hh"
 #include "base/cprintf.hh"
 #include "base/logging.hh"
+#include "base/trace.hh"
 #include "base/types.hh"
+#include "debug/AddrRange.hh"
 
 namespace gem5
 {
@@ -96,6 +101,8 @@ class AddrRange
      */
     std::vector<Addr> masks;
     std::vector<AddrRange> holes = {};
+    // AddrRangeList holes; // = {};
+
 
     /** The value to compare sel with. */
     uint8_t intlvMatch;
@@ -112,6 +119,7 @@ class AddrRange
     AddrRange(Dummy, Iterator begin_it, Iterator end_it)
         : _start(1), _end(0), intlvMatch(0)
     {
+
         if (begin_it != end_it) {
             // get the values from the first one and check the others
             _start = begin_it->_start;
@@ -166,8 +174,15 @@ class AddrRange
                              match, it->intlvMatch);
                     ++match;
                 }
-                modulo_by = 0;
-                lowest_modulo_bit = 0;
+                if (modulo_by > 0) {
+                    modulo_by = 1;
+                    lowest_modulo_bit = 6;
+                }
+                else {
+                    modulo_by = 0;
+                    lowest_modulo_bit = 0;
+                    // might be unnecessary
+                }
                 masks.clear();
                 intlvMatch = 0;
             }
@@ -198,6 +213,7 @@ class AddrRange
     AddrRange(Addr _start, Addr _end, uint8_t _modulo_by,
               uint8_t _lowest_modulo_bit, uint8_t _intlv_match,
               std::vector<AddrRange> holes = {})
+            // AddrRangeList holes)
         : _start(_start),
           _end(_end),
           holes(holes),
@@ -351,7 +367,6 @@ class AddrRange
     {
         return ((masks.size() > 0) || (modulo_by > 1));
     }
-    // maybe assume user is using modulo correctly?
 
     /**
      * Determing the interleaving granularity of the range.
@@ -435,6 +450,10 @@ class AddrRange
      */
     Addr end() const { return _end; }
 
+    AddrRangeList addrholes() const {
+        return AddrRangeList(holes.begin(), holes.end());
+    }
+
     /**
      * Get a string representation of the range. This could
      * alternatively be implemented as a operator<<, but at the moment
@@ -445,6 +464,11 @@ class AddrRange
     std::string
     to_string() const
     {
+        if (modulo_by > 0) {
+            return csprintf("[%#llx:%#llx] modulo_by %d, num holes: %d",
+                            _start, _end, modulo_by, holes.size());
+        }
+
         if (interleaved()) {
             if (!modulo_by) {  // modulo exclusive
 
@@ -871,7 +895,6 @@ class AddrRange
     exclude(const AddrRangeList &exclude_ranges) const
     {
         assert(!interleaved());
-
         auto sorted_ranges = exclude_ranges;
         sorted_ranges.sort();
 
@@ -952,6 +975,8 @@ class AddrRange
         if (_end != r._end)      return false;
         if (masks != r.masks)         return false;
         if (intlvMatch != r.intlvMatch)   return false;
+        if (modulo_by != r.modulo_by)   return false;
+        if (lowest_modulo_bit != r.lowest_modulo_bit) return false;
 
         return true;
     }
@@ -1044,6 +1069,7 @@ operator-=(AddrRangeList &base, const AddrRange &to_exclude)
 inline AddrRange
 RangeEx(Addr start, Addr end)
 {
+    // printf("RangeEx called\n");
     return AddrRange(start, end);
 }
 
@@ -1053,6 +1079,7 @@ RangeEx(Addr start, Addr end)
 inline AddrRange
 RangeIn(Addr start, Addr end)
 {
+    // printf("RangeIn called\n");
     return AddrRange(start, end + 1);
 }
 

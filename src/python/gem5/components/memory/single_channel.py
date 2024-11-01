@@ -116,13 +116,14 @@ def DIMM_DDR5_4400_x86_Holes(
     size: Optional[str] = None,
 ) -> AbstractMemorySystem:
     """
-    A single DIMM of DDR5 has two channels.
+    A single DIMM of DDR5 has two channels. The memory has a hole from
+    3GiB to 4GiB for the X86 IO range.
     """
     return ChanneledMemory(
         DDR5_4400_4x8,
         2,
         64,
         size=size,
-        holes=[AddrRange(start="3GiB", end=0xFFFF0000)],
+        holes=[AddrRange(start="3GiB", end="4GiB")],
         modulo=True,
     )

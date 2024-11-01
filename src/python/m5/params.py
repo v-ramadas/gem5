@@ -1287,6 +1287,8 @@ class AddrRange(ParamValue):
         # Go from the Python class to the wrapped C++ class
         from _m5.range import AddrRange
 
+        # from _m5.range import ModuloAddrRange
+
         if not self.modulo_by:
             return AddrRange(
                 int(self.start),
@@ -1316,6 +1318,7 @@ class AddrRange(ParamValue):
     def exclude(self, ranges):
         pybind_exclude = list([r.getValue() for r in ranges])
         pybind_include = self.getValue().exclude(pybind_exclude)
+        # may need to add modulo and hole support here.
 
         # when is this used?
         # add modulo and hole support here.

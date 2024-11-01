@@ -291,7 +291,7 @@ class X86Board(AbstractSystemBoard, KernelDiskWorkload, SEBinaryWorkload):
             entries.append(
                 X86E820Entry(
                     addr=0x100000,
-                    size=f"{toMemorySize("3GiB") - 0x100000:d}B",
+                    size=f"{0xC0000000 - 0x100000:d}B",
                     range_type=1,
                 )
             )
@@ -311,6 +311,7 @@ class X86Board(AbstractSystemBoard, KernelDiskWorkload, SEBinaryWorkload):
                     range_type=1,
                 )
             )
+
         # Reserve the last 16kB of the 32-bit address space for m5ops
         entries.append(
             X86E820Entry(addr=0xFFFF0000, size="64KiB", range_type=2)
@@ -365,21 +366,20 @@ class X86Board(AbstractSystemBoard, KernelDiskWorkload, SEBinaryWorkload):
     def _setup_memory_ranges(self):
         memory = self.get_memory()
 
-        # if memory.get_size() > toMemorySize("3GB"):
-        #     raise Exception(
-        #         "X86Board currently only supports memory sizes up "
-        #         "to 3GB because of the I/O hole."
-        #     )
-        data_range = AddrRange(
-            start=0,
-            end=memory.get_size(),
-            modulo_by=1,
-            lowest_modulo_bit=7,
-            intlvMatch=0,
-            holes=[AddrRange(start="3GiB", end="4GiB")],
-        )
-        # '0xFFFF0000'
-        # data_range = AddrRange(memory.get_size())
+        if memory.get_size() > toMemorySize("3GB"):
+            # add a warning here about using holes
+            # test if this is set if its unneeded in the memory controller
+            data_range = AddrRange(
+                start=0,
+                end=memory.get_size(),
+                modulo_by=1,
+                lowest_modulo_bit=7,
+                intlvMatch=0,
+                holes=[AddrRange(start="3GiB", end="4GiB")],
+            )
+        else:
+            data_range = AddrRange(memory.get_size())
+
         memory.set_memory_range([data_range])
 
         # Add the address range for the IO
