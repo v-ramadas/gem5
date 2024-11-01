@@ -865,7 +865,6 @@ class AddrRange
     Addr
     getOffset(const Addr& a) const
     {
-        // potentially subtract by hole sizes / modulo_by
         bool in_range = a >= _start && a < _end;
         if (!in_range) {
             return MaxAddr;
