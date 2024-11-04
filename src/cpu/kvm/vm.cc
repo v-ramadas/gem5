@@ -406,11 +406,10 @@ KvmVM::delayedStartup()
                                  static_cast<char*>(pmem) +
                                  (r.start()-range.start())
                                  ), r.start(), 0/* flags */);
-                }
 
-            } else{
-                panic("Multiple holes in memory ranges are not supported by
-                       KVM.\n");
+                }
+            } else {
+                panic("Multiple holes  not supported by KVM.\n");
                 // To support this need to have a sorted list of address holes
                 // then follow the process above
             }
