@@ -57,7 +57,10 @@ import argparse
 from gem5.coherence_protocol import CoherenceProtocol
 from gem5.components.devices.gpus.amdgpu import MI300X
 from gem5.components.memory import HBM2Stack
-from gem5.components.memory.single_channel import SingleChannelDDR4_2400
+from gem5.components.memory.single_channel import (
+    DIMM_DDR5_4400_x86_Holes,
+    SingleChannelDDR4_2400,
+)
 from gem5.components.processors.cpu_types import CPUTypes
 from gem5.components.processors.simple_processor import SimpleProcessor
 from gem5.isas import ISA
@@ -110,7 +113,8 @@ args = parser.parse_args()
 
 # stdlib only supports up to 3GiB currently. This will need to be expanded in
 # the future.
-memory = SingleChannelDDR4_2400(size="3GiB")
+# memory = SingleChannelDDR4_2400(size="3GiB")
+memory = DIMM_DDR5_4400_x86_Holes(size="9GiB")
 
 # Note: Only KVM and ATOMIC work due to buggy MOESI_AMD_Base protocol.
 processor = SimpleProcessor(cpu_type=CPUTypes.KVM, isa=ISA.X86, num_cores=2)
@@ -151,6 +155,6 @@ board.set_kernel_disk_workload(
     disk_image=disk,
     readfile_contents=board.make_gpu_app(gpu0, args.app),
 )
-
+# board.pc.com_1.device.outfile="stderror"
 simulator = Simulator(board=board)
 simulator.run()
